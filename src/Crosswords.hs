@@ -17,10 +17,23 @@ empty = Crossword Map.empty
 numWords :: Crossword -> Int
 numWords (Crossword mapping) = Map.size mapping
 
-width :: Crossword -> Int
-width = undefined
-height :: Crossword -> Int
-height = undefined
+class Sizeable a where
+  width :: a -> Int
+  height :: a -> Int
+
+class Rated a where
+  rating :: Fractional b => a -> b
+
+instance Sizeable Crossword where
+  width = undefined
+  height = undefined
+
+instance Rated Crossword where
+  rating crossword = fromIntegral (area * (1 + sidesDiff)) / fromIntegral (numWords crossword) where
+    area = w * h
+    sidesDiff = abs $ w - h
+    w = width crossword
+    h = height crossword
 
 instance Show Crossword where
   show crossword = undefined
@@ -30,17 +43,6 @@ instance Eq Crossword where
 
 instance Ord Crossword where
   compare c1 c2 = compare (rating c1) (rating c2)
-
-
-class Rated a where
-  rating :: Fractional b => a -> b
-
-instance Rated Crossword where
-  rating crossword = fromIntegral (area * (1 + sidesDiff)) / fromIntegral (numWords crossword) where
-    area = w * h
-    sidesDiff = abs $ w - h
-    w = width crossword
-    h = height crossword
 
 
 generate :: [String] -> [Crossword]
