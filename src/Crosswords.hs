@@ -14,28 +14,34 @@ newtype Crossword = Crossword (Map Point Word) -- dense representation
 empty :: Crossword
 empty = Crossword Map.empty
 
+numWords :: Crossword -> Int
+numWords (Crossword mapping) = Map.size mapping
+
+width :: Crossword -> Int
+width = undefined
+height :: Crossword -> Int
+height = undefined
+
 instance Show Crossword where
   show crossword = undefined
 
 instance Eq Crossword where
-  c1 == c2 = (rate c1) == (rate c2)
+  c1 == c2 = (rating c1) == (rating c2)
 
 instance Ord Crossword where
-  compare c1 c2 = compare (rate c1) (rate c2)
+  compare c1 c2 = compare (rating c1) (rating c2)
 
 
-width :: Crossword -> Int
-width = undefined
+class Rated a where
+  rating :: Fractional b => a -> b
 
-height :: Crossword -> Int
-height = undefined
+instance Rated Crossword where
+  rating crossword = fromIntegral (area * (1 + sidesDiff)) / fromIntegral (numWords crossword) where
+    area = w * h
+    sidesDiff = abs $ w - h
+    w = width crossword
+    h = height crossword
 
-rate :: Crossword -> Int
-rate crossword = area * (1 + sidesDiff) where
-  area = w * h
-  sidesDiff = abs $ w - h
-  w = width crossword
-  h = height crossword
 
 generate :: [String] -> [Crossword]
 generate words = generateAux words [Crosswords.empty]
