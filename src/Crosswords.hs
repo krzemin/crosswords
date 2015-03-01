@@ -31,7 +31,7 @@ height :: Crossword -> Int
 height = undefined
 
 rate :: Crossword -> Int
-rate crossword = area * sidesDiff where
+rate crossword = area * (1 + sidesDiff) where
   area = w * h
   sidesDiff = abs $ w - h
   w = width crossword
