@@ -20,13 +20,27 @@ case class Crossword(matrix: Map[Point, WordInside] = Map.empty,
                      charIdx: Map[Char, Set[Point]] = Map.empty,
                      boundRect: (Point, Point) = (Point(0, 0), Point(0, 0))) {
   def width: Int = boundRect._2.x - boundRect._1.x
+
   def height: Int = boundRect._2.y - boundRect._1.y
+
   def area: Int = width * height
+
   def diffSide: Int = math.abs(width - height)
+
   def rate: Double = area * (1 + diffSide)
 
-  def tryInsert(wordPlaced: List[(Char, Point)]): Option[Crossword] = {
-    None
+  def tryInsert(word: String, orientation: Orientation, startingPoint: Point): Option[Crossword] = {
+    val charWithPoints = orientation.zipWithPoints(word, startingPoint)
+    if (charWithPoints.forall(???)) // TODO
+    {
+      Some(Crossword(
+        matrix = this.matrix + (startingPoint -> WordInside(word, orientation)),
+        charIdx = charWithPoints.groupBy(_._1).mapValues(_.map(_._2).toSet), // TODO
+        boundRect = ??? // TODO
+      ))
+    } else {
+      None
+    }
   }
 
   def next(word: String): List[Crossword] = if(matrix.isEmpty) {
@@ -43,11 +57,14 @@ case class Crossword(matrix: Map[Point, WordInside] = Map.empty,
       wordCharIdx(c).map(i => (pt, i))
     }
 
-    val horizontalCombinations = ???
-    val verticalCombinations = ???
+    val horizontalCombinations = crossingPointsWithPosition.flatMap { case (Point(x, y), i) =>
+      tryInsert(word, Horizontal, Point(x - i, y))
+    }
+    val verticalCombinations = crossingPointsWithPosition.flatMap { case (Point(x, y), i) =>
+      tryInsert(word, Vertical, Point(x, y - i))
+    }
 
-
-    List.empty
+    horizontalCombinations ++ verticalCombinations
   }
 
 
@@ -74,13 +91,10 @@ case class Crossword(matrix: Map[Point, WordInside] = Map.empty,
   override def toString = toMatrix.mkString("\n")
 
 }
-
 case class State(crossword: Crossword, wordsLeft: Set[String]) {
   def isFinal: Boolean = wordsLeft.isEmpty
 }
-
 implicit val stOrd: Ordering[State] = Ordering.by(s => s.crossword.rate * s.wordsLeft.size)
-
 def generate(words: Set[String]): Stream[Crossword] = {
 
   def genAux(pq: mutable.PriorityQueue[State]): Stream[Crossword] = pq.isEmpty match {
@@ -110,7 +124,6 @@ def generate(words: Set[String]): Stream[Crossword] = {
 
 
 // tests ;)
-
 Horizontal.zipWithPoints("katamaran", Point(0, 0))
 Vertical.zipWithPoints("katamaran", Point(0, 0))
 val cw1 = Crossword().next("katamaran").head
@@ -119,6 +132,6 @@ cw1.toMatrix
 cw1.toString
 
 val cw2 = cw1.next("lalka").head
-//cw2.toCharMap
-//cw2.toMatrix
-//cw2.toString
+cw2.toCharMap
+cw2.toMatrix
+cw2.toString
