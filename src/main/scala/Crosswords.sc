@@ -1,7 +1,5 @@
 import scala.collection.mutable
-
 case class Point(x: Int, y: Int)
-
 sealed trait Orientation {
   def nextPoint(p: Point): Point
   def zipWithPoints(word: String, starting: Point): List[(Char, Point)] = {
@@ -10,29 +8,26 @@ sealed trait Orientation {
     }.toList
   }
 }
-
 case object Horizontal extends Orientation {
   def nextPoint(p: Point): Point = Point(p.x + 1, p.y)
 }
 case object Vertical extends Orientation {
   def nextPoint(p: Point): Point = Point(p.x, p.y + 1)
 }
-
 case class WordInside(text: String,
                       orientation: Orientation)
 case class Crossword(matrix: Map[Point, WordInside] = Map.empty,
                      charIdx: Map[Char, Set[Point]] = Map.empty,
                      boundRect: (Point, Point) = (Point(0, 0), Point(0, 0))) {
-
   def width: Int = boundRect._2.x - boundRect._1.x
-
   def height: Int = boundRect._2.y - boundRect._1.y
-
   def area: Int = width * height
-
   def diffSide: Int = math.abs(width - height)
-
   def rate: Double = area * (1 + diffSide)
+
+  def tryInsert(wordPlaced: List[(Char, Point)]): Option[Crossword] = {
+    None
+  }
 
   def next(word: String): List[Crossword] = if(matrix.isEmpty) {
     List(Crossword(
@@ -42,8 +37,20 @@ case class Crossword(matrix: Map[Point, WordInside] = Map.empty,
       boundRect = (Point(0, 0), Point(word.length, 1))
     ))
   } else {
-    ???
+    val possibleCrossingPoints = word.toList.flatMap(c => charIdx(c).map(p => (p, c)))
+    val wordCharIdx = word.zipWithIndex.groupBy(_._1).mapValues(_.map(_._2).toList)
+    val crossingPointsWithPosition = possibleCrossingPoints.flatMap { case (pt, c) =>
+      wordCharIdx(c).map(i => (pt, i))
+    }
+
+    val horizontalCombinations = ???
+    val verticalCombinations = ???
+
+
+    List.empty
   }
+
+
 
   def toCharMap: Map[Point, Char] = matrix.foldLeft(Map.empty[Point, Char]) {
     case (map, (point, word)) =>
@@ -67,12 +74,13 @@ case class Crossword(matrix: Map[Point, WordInside] = Map.empty,
   override def toString = toMatrix.mkString("\n")
 
 }
-implicit val cwOrd: Ordering[Crossword] = Ordering.by(_.rate)
-case class State(crossword: Crossword, wordsLeft: Set[String]) {
 
+case class State(crossword: Crossword, wordsLeft: Set[String]) {
   def isFinal: Boolean = wordsLeft.isEmpty
 }
+
 implicit val stOrd: Ordering[State] = Ordering.by(s => s.crossword.rate * s.wordsLeft.size)
+
 def generate(words: Set[String]): Stream[Crossword] = {
 
   def genAux(pq: mutable.PriorityQueue[State]): Stream[Crossword] = pq.isEmpty match {
@@ -109,3 +117,8 @@ val cw1 = Crossword().next("katamaran").head
 cw1.toCharMap
 cw1.toMatrix
 cw1.toString
+
+val cw2 = cw1.next("lalka").head
+//cw2.toCharMap
+//cw2.toMatrix
+//cw2.toString
