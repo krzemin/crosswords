@@ -41,9 +41,11 @@ object Crosswords {
 
     def area: Int = width * height
 
-    def diffSide: Int = math.abs(width - height)
+    def diffSide: Double = math.abs(width.toDouble / height)
 
-    def rate: Double = area * (1 + diffSide) * (1 + diffSide)
+    def rate2: Double = (1.0 + diffSide) / area
+
+    def rate: Double = (1.0 + diffSide) * area
 
     def letterMatch(orientation: Orientation)(letterAndPoint: (Char, Point)): Boolean = {
       val (letter, point) = letterAndPoint
@@ -54,15 +56,15 @@ object Crosswords {
       lazy val oppWordIdx = oppOrientation match { case Horizontal => hWordStartIdx ; case Vertical => vWordStartIdx }
       lazy val sameWordIdx = orientation match { case Horizontal => hWordStartIdx ; case Vertical => vWordStartIdx }
 
-      lazy val np1Ok = np1Char == ' ' || (sameWordIdx.get(nearPoint1).isEmpty &&
+      lazy val np1IsOk = np1Char == ' ' || (sameWordIdx.get(nearPoint1).isEmpty &&
         oppWordIdx.get(nearPoint1).exists { wordStartPt =>
           val wordLen = matrix(wordStartPt).find(_.orientation == oppOrientation).get.text.length
           val wordEndPt = oppOrientation.plus(wordStartPt, wordLen - 1)
           nearPoint1.x < wordEndPt.x || nearPoint1.y < wordEndPt.y
         })
-      lazy val np2Ok = np2Char == ' ' || (sameWordIdx.get(nearPoint2).isEmpty &&
+      lazy val np2IsOk = np2Char == ' ' || (sameWordIdx.get(nearPoint2).isEmpty &&
         oppWordIdx.get(nearPoint2).exists(_ != nearPoint2))
-      (letterAtPoint == letter || letterAtPoint == ' ') && np1Ok && np2Ok
+      (letterAtPoint == letter || letterAtPoint == ' ') && np1IsOk && np2IsOk
     }
 
     def tryInsert(word: String, orientation: Orientation, startingPoint: Point): Option[Crossword] = {
@@ -149,7 +151,7 @@ object Crosswords {
       buff.map(_.toString()).toList
     }
 
-    def infoLine = s"${width}x$height|r:$rate|l:${matrix.size}|tl:${boundRect._1}"
+    def infoLine = s"${width}x$height|r:$rate|r2:$rate2|l:${matrix.size}|tl:${boundRect._1}"
 
     override def toString = infoLine + "\n" + toMatrix.mkString("\n")
   }
@@ -158,7 +160,7 @@ object Crosswords {
     def isFinal: Boolean = wordsLeft.isEmpty
   }
 
-  implicit val stOrd: Ordering[State] = Ordering.by(s => math.sqrt(s.crossword.rate) * s.wordsLeft.size)
+  implicit val stOrd: Ordering[State] = Ordering.by(s => s.crossword.rate2 * s.wordsLeft.size.toDouble)
 
 
   def generate(words: Set[String]): Stream[Crossword] = {
@@ -169,7 +171,7 @@ object Crosswords {
 
     val pq = mutable.PriorityQueue(initialStates : _*)
 
-    Stream.from(1).flatMap { _ =>
+    Stream.from(1).map { i =>
       var curState: State = null
       while(pq.nonEmpty && (curState == null || !curState.isFinal)) {
         curState = pq.dequeue()
@@ -180,12 +182,13 @@ object Crosswords {
         }
         pq.enqueue(nextStates: _*)
       }
+      println(s"found $i")
       if(curState == null || !curState.isFinal) {
         None
       } else {
         Some(curState.crossword)
       }
-    }
+    }.takeWhile(_.isDefined).flatten
   }
 
 }
