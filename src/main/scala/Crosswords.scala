@@ -38,9 +38,9 @@ object Crosswords {
 
     def diffSide: Int = math.abs(width - height)
 
-    def rate: Double = area * (1 + diffSide)
+    def rate: Double = area * (1 + diffSide) * (1 + diffSide)
 
-    def letterMatch(letterAndPoint: (Char, Point)): Boolean = {
+    def letterMatch(orientation: Orientation)(letterAndPoint: (Char, Point)): Boolean = {
       val (letter, point) = letterAndPoint
       val letterAtPoint = toCharMap.getOrElse(point, ' ')
       letterAtPoint == letter || letterAtPoint == ' '
@@ -48,7 +48,14 @@ object Crosswords {
 
     def tryInsert(word: String, orientation: Orientation, startingPoint: Point): Option[Crossword] = {
       val charWithPoints = orientation.zipWithPoints(word, startingPoint)
-      if (charWithPoints.forall(letterMatch)) {
+
+      val canInsert: Boolean = {
+        charWithPoints.forall(letterMatch(orientation)) &&
+          !toCharMap.contains(orientation.plus(startingPoint, -1)) &&
+          !toCharMap.contains(orientation.plus(startingPoint, word.length))
+      }
+
+      if (canInsert) {
         val endingPoint = orientation.plus(startingPoint, word.length)
         val addedCharIdx = charWithPoints.groupBy(_._1).mapValues(_.map(_._2).toSet)
         Some(Crossword(
@@ -114,7 +121,9 @@ object Crosswords {
       buff.map(_.toString()).toList
     }
 
-    override def toString = toMatrix.mkString("\n")
+    def infoLine = s"${width}x$height|r:$rate|l:${matrix.size}"
+
+    override def toString = infoLine + "\n" + toMatrix.mkString("\n")
   }
 
   case class State(crossword: Crossword, wordsLeft: Set[String]) {
