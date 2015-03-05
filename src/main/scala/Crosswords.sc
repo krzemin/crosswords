@@ -1,7 +1,8 @@
 import scala.collection.mutable
 case class Point(x: Int, y: Int)
 sealed trait Orientation {
-  def nextPoint(p: Point): Point
+  def plus(p: Point, d: Int): Point
+  def nextPoint(p: Point): Point = plus(p, 1)
   def zipWithPoints(word: String, starting: Point): List[(Char, Point)] = {
     word.tail.scanLeft( (word.head, starting) ) { case ((_, pt), c) =>
       (c, nextPoint(pt))
@@ -9,10 +10,10 @@ sealed trait Orientation {
   }
 }
 case object Horizontal extends Orientation {
-  def nextPoint(p: Point): Point = Point(p.x + 1, p.y)
+  def plus(p: Point, d: Int): Point = Point(p.x + d, p.y)
 }
 case object Vertical extends Orientation {
-  def nextPoint(p: Point): Point = Point(p.x, p.y + 1)
+  def plus(p: Point, d: Int): Point = Point(p.x, p.y + d)
 }
 case class WordInside(text: String,
                       orientation: Orientation)
@@ -29,14 +30,28 @@ case class Crossword(matrix: Map[Point, WordInside] = Map.empty,
 
   def rate: Double = area * (1 + diffSide)
 
+  def letterMatch(letterAndPoint: (Char, Point)): Boolean = {
+    val (letter, point) = letterAndPoint
+    val letterAtPoint = toCharMap(point)
+    letterAtPoint == letter || letterAtPoint == ' '
+  }
+
   def tryInsert(word: String, orientation: Orientation, startingPoint: Point): Option[Crossword] = {
     val charWithPoints = orientation.zipWithPoints(word, startingPoint)
-    if (charWithPoints.forall(???)) // TODO
-    {
+    if (charWithPoints.forall(letterMatch)) {
+      val endingPoint = orientation.plus(startingPoint, word.length)
+      val addedCharIdx = charWithPoints.groupBy(_._1).mapValues(_.map(_._2).toSet)
       Some(Crossword(
         matrix = this.matrix + (startingPoint -> WordInside(word, orientation)),
-        charIdx = charWithPoints.groupBy(_._1).mapValues(_.map(_._2).toSet), // TODO
-        boundRect = ??? // TODO
+        charIdx = addedCharIdx.foldLeft(this.charIdx) { case (cIdx, (c, pointSet)) =>
+            cIdx + (c -> (pointSet ++ cIdx.getOrElse(c, Set.empty[Point])))
+        },
+        boundRect = (
+          Point(math.min(startingPoint.x, boundRect._1.x),
+                math.min(startingPoint.y, boundRect._1.y)),
+          Point(math.max(endingPoint.x, boundRect._2.x),
+                math.max(endingPoint.y, boundRect._2.y))
+        )
       ))
     } else {
       None
@@ -69,7 +84,7 @@ case class Crossword(matrix: Map[Point, WordInside] = Map.empty,
 
 
 
-  def toCharMap: Map[Point, Char] = matrix.foldLeft(Map.empty[Point, Char]) {
+  lazy val toCharMap: Map[Point, Char] = matrix.foldLeft(Map.empty[Point, Char]) {
     case (map, (point, word)) =>
       word.orientation.zipWithPoints(word.text, point).foldLeft(map) { case (m, (c, pt)) =>
         m + (pt -> c)
